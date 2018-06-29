@@ -7,7 +7,9 @@ from pickle_tools import load_pickle, dump_pickle
 
 
 USING_WORDS_NUM = 10000
-CLUSTERS_NUM = 100
+WORD_CLUSTERS_NUM = 100
+USING_ARTICLES_NUM = 10000
+ARTICLE_CLUSTERS_NUM = 100
 
 
 def load_vectors(fname):
@@ -27,7 +29,7 @@ def load_vectors(fname):
     return data
 
 
-def make_word_cluster_dict(data, clusters):
+def make_cluster_dict(data, clusters):
     """
     {"単語1": 単語ベクトル1, "単語2", 単語ベクトル2・・・}のようなdictとK-Meansのクラスタ数を受け取って,
     {"単語1": クラスタラベル1, "単語2": クラスタラベル2・・・}のようなdictを返す.
@@ -52,6 +54,12 @@ def make_word_cluster_dict(data, clusters):
 
 
 def document_to_vec(document, cluster_dict):
+    """
+    半角スペースで区切られた文書と, 単語クラスタdictから, 文書を表すベクトル(list)を返す. 
+    :param document: 
+    :param cluster_dict: 
+    :return: 
+    """
     word_list = document.split(" ")
     cluster_cnt_dict = defaultdict(int)
     all_cnt = 0
@@ -66,6 +74,7 @@ def document_to_vec(document, cluster_dict):
     else:
         returning_vec = [0 for i in range(CLUSTERS_NUM)]
 
+    print(returning_vec)
     return returning_vec
     
     
@@ -92,7 +101,7 @@ def mainichi_corpus_data_to_documents(filename):
 
 def main():
     data = load_vectors("cc.ja.300.vec")
-    word_cluster_dict = make_word_cluster_dict(data, CLUSTERS_NUM)
+    word_cluster_dict = make_cluster_dict(data, WORD_CLUSTERS_NUM)
     dump_pickle(word_cluster_dict, "word_cluster_dict_mini.pickle")
     headline_document_tuple_list = mainichi_corpus_data_to_documents("/home/ytaniguchi/kenkyu/news_systematize_2/corpus_data/pickles/mai2017_word_parse_added_part1.pickle")
     document_vec_list = []
@@ -106,9 +115,9 @@ def main():
     for document_vec_tuple in document_vec_list:
         document_vec_dict[document_vec_tuple[0]] = document_vec
 
-    doc_cluster_dict = make_word_cluster_dict(document_vec_dict, CLUSTERS_NUM)
+    doc_cluster_dict = make_cluster_dict(document_vec_dict, ARTICLE_CLUSTERS_NUM)
 
-    for i in range(CLUSTERS_NUM):
+    for i in range(ARTICLE_CLUSTERS_NUM):
         print("label = {}".format(i))
         for d in doc_cluster_dict:
             if doc_cluster_dict[d] == i:
