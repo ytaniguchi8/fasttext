@@ -8,8 +8,8 @@ from pickle_tools import load_pickle, dump_pickle
 
 USING_WORDS_NUM = 2000000
 WORD_CLUSTERS_NUM = 1000
-USING_ARTICLES_NUM = 500
-ARTICLE_CLUSTERS_NUM = 50
+USING_ARTICLES_NUM = 100
+ARTICLE_CLUSTERS_NUM = 10
 
 
 def load_vectors(fname):
@@ -102,9 +102,19 @@ def mainichi_corpus_data_to_documents(filename):
 
 
 def main():
-    data = load_vectors("cc.ja.300.vec")
-    word_cluster_dict = make_cluster_dict(data, WORD_CLUSTERS_NUM, USING_WORDS_NUM)
-    dump_pickle(word_cluster_dict, "word_cluster_dict_mini.pickle")
+    # data = load_vectors("cc.ja.300.vec")
+    # word_cluster_dict = make_cluster_dict(data, WORD_CLUSTERS_NUM, USING_WORDS_NUM)
+    # dump_pickle(word_cluster_dict, "word_cluster_dict_mini.pickle")
+
+    word_cluster_dict = load_pickle("word_cluster_dict_mini.pickle")
+
+    # for i in range(WORD_CLUSTERS_NUM):
+    #     print("label = {}".format(i))
+    #     for w in word_cluster_dict:
+    #         if word_cluster_dict[w] == i:
+    #             print(w, end=", ")
+    #     print("-"*100)
+
     headline_document_tuple_list = mainichi_corpus_data_to_documents("/home/ytaniguchi/kenkyu/news_systematize_2/corpus_data/pickles/mai2017_word_parse_added_part1.pickle")
     document_vec_list = []
     
@@ -113,7 +123,8 @@ def main():
         document_vec_list.append((headline_document_tuple[0], headline_document_tuple[1], document_vec))
     dump_pickle(document_vec_list, "document_vec_list_mini.pickle")
 
-    print(document_vec_list[0])
+    print("document_vec_list", document_vec_list[0])
+
     document_vec_dict = {}
 
     for document_vec_tuple in document_vec_list:
