@@ -42,7 +42,7 @@ def make_cluster_dict(data, clusters):
         x_tuple_list.append((d, data[d]))
         x_list.append((data[d]))
     
-    k_means = KMeans(n_clusters=CLUSTERS_NUM, verbose=1)
+    k_means = KMeans(n_clusters=clusters, verbose=1)
     pred = k_means.fit_predict(x_list)
 
     cluster_res = {}
@@ -69,10 +69,10 @@ def document_to_vec(document, cluster_dict):
             cluster_cnt_dict[cluster_dict[w]] += 1
             all_cnt += 1
     if all_cnt != 0:
-        for i in range(CLUSTERS_NUM):
+        for i in range(WORD_CLUSTERS_NUM):
             returning_vec.append(cluster_cnt_dict[i] / all_cnt)
     else:
-        returning_vec = [0 for i in range(CLUSTERS_NUM)]
+        returning_vec = [0 for i in range(WORD_CLUSTERS_NUM)]
 
     print(returning_vec)
     return returning_vec
