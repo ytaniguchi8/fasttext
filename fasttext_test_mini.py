@@ -9,7 +9,7 @@ import numpy as np
 
 USING_WORDS_NUM = 2000000
 WORD_CLUSTERS_NUM = 1000
-USING_ARTICLES_NUM = 100
+USING_ARTICLES_NUM = 1000
 ARTICLE_CLUSTERS_NUM = 10
 
 
@@ -22,7 +22,7 @@ def _cos_sim(v1, v2):
 
 def _centroid(vec_list):
     centroid_vec = []
-    for i in range(vec_list[0]):
+    for i in range(len(vec_list[0])):
         centroid_vec.append(sum(list(map(lambda x: x[i], vec_list))) / len(vec_list))
 
     return np.array(centroid_vec)
@@ -104,30 +104,39 @@ def online_cluster_docs(document_vec_tuple_list):
     :return: 
     """
 
-    CLUSTER_THRESHOLD = 0.3
+    CLUSTER_THRESHOLD = 0.8
 
     clusters_dict_list = []
 
-    for document_vec_tuple in document_vec_tuple_list:
+    for i, document_vec_tuple in enumerate(document_vec_tuple_list, start=1):
+        print("online clustering... {} / {}".format(i, len(document_vec_tuple_list)))
         headline = document_vec_tuple[0]
         document = document_vec_tuple[1]
         document_vec = np.array(document_vec_tuple[2])
 
         cos_sim_list = []
+        print("clusters_num", len(clusters_dict_list))
         for clusters_dict in clusters_dict_list:
-            cos_sim_list.append(_cos_sim(clusters_dict['centroid'], document_vec))
+            cos_sim_list.append(_cos_sim(clusters_dict['centroid'], list(document_vec)))
+
+        # print(cos_sim_list)
 
         if len(cos_sim_list) > 0:
-            closest_cluster_num = np.array(cos_sim_list).argmin()
+            closest_cluster_num = np.array(cos_sim_list).argmax()
+            closest_cluster_sim = np.array(cos_sim_list).max()
 
-            if closest_cluster_num < CLUSTER_THRESHOLD:
-                clusters_dict_list[closest_cluster_num]['included_docs'].append(document_vec)
-                clusters_dict_list[closest_cluster_num]['centroid'] = _centroid(clusters_dict_list[closest_cluster_num]['included_docs'])
+            print("sim = ", closest_cluster_sim)
+
+            if closest_cluster_sim > CLUSTER_THRESHOLD:
+                print("はいってる", closest_cluster_num)
+                clusters_dict_list[closest_cluster_num]['included_docs'].append(document_vec_tuple)
+                document_vec_list = list(map(lambda x: x[2], clusters_dict_list[closest_cluster_num]['included_docs']))
+                clusters_dict_list[closest_cluster_num]['centroid'] = _centroid(document_vec_list)
             else:
-                clusters_dict_list.append({'included_docs': [document_vec],
+                clusters_dict_list.append({'included_docs': [document_vec_tuple],
                                            'centroid'     : document_vec})
         else:
-            clusters_dict_list.append({'included_docs': [document_vec],
+            clusters_dict_list.append({'included_docs': [document_vec_tuple],
                                        'centroid': document_vec})
 
     return clusters_dict_list
@@ -188,8 +197,10 @@ def main():
 
     doc_cluster_dict_list = online_cluster_docs(document_vec_list)
 
-    for doc_cluster_dict in doc_cluster_dict_list:
-        print(doc_cluster_dict)
+    for i, doc_cluster_dict in enumerate(doc_cluster_dict_list, start=1):
+        print("label = {}".format(i))
+        for included_doc in doc_cluster_dict["included_docs"]:
+            print(included_doc[0])
         print("-"*100)
 
     # doc_cluster_dict = make_cluster_dict(document_vec_dict, ARTICLE_CLUSTERS_NUM, USING_ARTICLES_NUM)
