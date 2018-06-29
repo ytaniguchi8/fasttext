@@ -6,10 +6,10 @@ from collections import defaultdict
 from pickle_tools import load_pickle, dump_pickle
 
 
-USING_WORDS_NUM = 10000
-WORD_CLUSTERS_NUM = 100
-USING_ARTICLES_NUM = 10000
-ARTICLE_CLUSTERS_NUM = 100
+USING_WORDS_NUM = 2000000
+WORD_CLUSTERS_NUM = 1000
+USING_ARTICLES_NUM = 500
+ARTICLE_CLUSTERS_NUM = 50
 
 
 def load_vectors(fname):
@@ -29,7 +29,7 @@ def load_vectors(fname):
     return data
 
 
-def make_cluster_dict(data, clusters):
+def make_cluster_dict(data, clusters, data_num):
     """
     {"単語1": 単語ベクトル1, "単語2", 単語ベクトル2・・・}のようなdictとK-Meansのクラスタ数を受け取って,
     {"単語1": クラスタラベル1, "単語2": クラスタラベル2・・・}のようなdictを返す.
@@ -37,12 +37,14 @@ def make_cluster_dict(data, clusters):
     x_tuple_list = []
     x_list = []
     for i, d in enumerate(data):
-        if i == USING_WORDS_NUM:
+        if i == data_num:
             break
         x_tuple_list.append((d, data[d]))
         x_list.append((data[d]))
     
-    k_means = KMeans(n_clusters=clusters, verbose=1)
+    print("x_list[0] = ", x_list[0])
+
+    k_means = KMeans(n_clusters=clusters, verbose=1, n_init=1)
     pred = k_means.fit_predict(x_list)
 
     cluster_res = {}
@@ -93,19 +95,19 @@ def mainichi_corpus_data_to_documents(filename):
             for p in spd["parse"]:
                 if p["surface"] != "\u3000":
                     word_list.append(p["surface"])
-                    document = " ".join(word_list)
-                    headline_document_tuple_list.append((article_headline, document))
+        document = " ".join(word_list)
+        headline_document_tuple_list.append((article_headline, document))
     
     return headline_document_tuple_list
 
 
 def main():
     data = load_vectors("cc.ja.300.vec")
-    word_cluster_dict = make_cluster_dict(data, WORD_CLUSTERS_NUM)
+    word_cluster_dict = make_cluster_dict(data, WORD_CLUSTERS_NUM, USING_WORDS_NUM)
     dump_pickle(word_cluster_dict, "word_cluster_dict_mini.pickle")
     headline_document_tuple_list = mainichi_corpus_data_to_documents("/home/ytaniguchi/kenkyu/news_systematize_2/corpus_data/pickles/mai2017_word_parse_added_part1.pickle")
     document_vec_list = []
-    for headline_document_tuple in headline_document_tuple_list:
+    for headline_document_tuple in headline_document_tuple_list[:USING_ARTICLES_NUM]:
         document_vec = document_to_vec(headline_document_tuple[1], word_cluster_dict)
         document_vec_list.append((headline_document_tuple[0], headline_document_tuple[1], document_vec))
     dump_pickle(document_vec_list, "document_vec_list_mini.pickle")
@@ -113,9 +115,12 @@ def main():
     document_vec_dict = {}
 
     for document_vec_tuple in document_vec_list:
-        document_vec_dict[document_vec_tuple[0]] = document_vec
+        document_vec_dict[document_vec_tuple[0]] = document_vec_tuple[2]
 
-    doc_cluster_dict = make_cluster_dict(document_vec_dict, ARTICLE_CLUSTERS_NUM)
+    print(len(document_vec_list))
+    print(len(document_vec_dict))
+
+    doc_cluster_dict = make_cluster_dict(document_vec_dict, ARTICLE_CLUSTERS_NUM, USING_ARTICLES_NUM)
 
     for i in range(ARTICLE_CLUSTERS_NUM):
         print("label = {}".format(i))
