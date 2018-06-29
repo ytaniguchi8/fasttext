@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import io
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, MiniBatchKMeans
 from collections import defaultdict
 from pickle_tools import load_pickle, dump_pickle
 
@@ -44,7 +44,7 @@ def make_cluster_dict(data, clusters, data_num):
     
     print("x_list[0] = ", x_list[0])
 
-    k_means = KMeans(n_clusters=clusters, verbose=1, n_init=1)
+    k_means = MiniBatchKMeans(n_clusters=clusters, verbose=1, n_init=1)
     pred = k_means.fit_predict(x_list)
 
     cluster_res = {}
