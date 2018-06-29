@@ -4,12 +4,28 @@ import io
 from sklearn.cluster import KMeans, MiniBatchKMeans
 from collections import defaultdict
 from pickle_tools import load_pickle, dump_pickle
+import numpy as np
 
 
 USING_WORDS_NUM = 2000000
 WORD_CLUSTERS_NUM = 1000
 USING_ARTICLES_NUM = 100
 ARTICLE_CLUSTERS_NUM = 10
+
+
+def _cos_sim(v1, v2):
+    """
+    2つのベクトルのコサイン類似度を返す
+    """
+    return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+
+
+def _centroid(vec_list):
+    centroid_vec = []
+    for i in range(vec_list[0]):
+        centroid_vec.append(sum(list(map(lambda x: x[i], vec_list))) / len(vec_list))
+
+    return np.array(centroid_vec)
 
 
 def load_vectors(fname):
@@ -79,7 +95,44 @@ def document_to_vec(document, cluster_dict):
     print(returning_vec)
     return returning_vec
     
-    
+
+def online_cluster_docs(document_vec_tuple_list):
+    """
+    (見出し, 半角スペース区切り本文, 文書分散表現)のtupleのリストを受け取って,
+    {"included_docs": [tuple, tuple, ...], "centroid": 重心ベクトル(list)}のdictのlistを返す.
+    :param document_vec_tuple_list: 
+    :return: 
+    """
+
+    CLUSTER_THRESHOLD = 0.3
+
+    clusters_dict_list = []
+
+    for document_vec_tuple in document_vec_tuple_list:
+        headline = document_vec_tuple[0]
+        document = document_vec_tuple[1]
+        document_vec = np.array(document_vec_tuple[2])
+
+        cos_sim_list = []
+        for clusters_dict in clusters_dict_list:
+            cos_sim_list.append(_cos_sim(clusters_dict['centroid'], document_vec))
+
+        if len(cos_sim_list) > 0:
+            closest_cluster_num = np.array(cos_sim_list).argmin()
+
+            if closest_cluster_num < CLUSTER_THRESHOLD:
+                clusters_dict_list[closest_cluster_num]['included_docs'].append(document_vec)
+                clusters_dict_list[closest_cluster_num]['centroid'] = _centroid(clusters_dict_list[closest_cluster_num]['included_docs'])
+            else:
+                clusters_dict_list.append({'included_docs': [document_vec],
+                                           'centroid'     : document_vec})
+        else:
+            clusters_dict_list.append({'included_docs': [document_vec],
+                                       'centroid': document_vec})
+
+    return clusters_dict_list
+
+
 def mainichi_corpus_data_to_documents(filename):
     """
     毎日新聞コーパスデータのpickleファイル名を受け取って,
@@ -123,7 +176,7 @@ def main():
         document_vec_list.append((headline_document_tuple[0], headline_document_tuple[1], document_vec))
     dump_pickle(document_vec_list, "document_vec_list_mini.pickle")
 
-    print("document_vec_list", document_vec_list[0])
+    # print("document_vec_list", document_vec_list[0])
 
     document_vec_dict = {}
 
@@ -133,14 +186,20 @@ def main():
     print(len(document_vec_list))
     print(len(document_vec_dict))
 
-    doc_cluster_dict = make_cluster_dict(document_vec_dict, ARTICLE_CLUSTERS_NUM, USING_ARTICLES_NUM)
+    doc_cluster_dict_list = online_cluster_docs(document_vec_list)
 
-    for i in range(ARTICLE_CLUSTERS_NUM):
-        print("label = {}".format(i))
-        for d in doc_cluster_dict:
-            if doc_cluster_dict[d] == i:
-                print(d)
+    for doc_cluster_dict in doc_cluster_dict_list:
+        print(doc_cluster_dict)
         print("-"*100)
+
+    # doc_cluster_dict = make_cluster_dict(document_vec_dict, ARTICLE_CLUSTERS_NUM, USING_ARTICLES_NUM)
+
+    # for i in range(ARTICLE_CLUSTERS_NUM):
+    #     print("label = {}".format(i))
+    #     for d in doc_cluster_dict:
+    #         if doc_cluster_dict[d] == i:
+    #             print(d)
+    #     print("-"*100)
 
     # cluster_dict = load_pickle("word_cluster_dict.pickle")
     # vec = document_to_vec("私 は 元から 強い 。", cluster_dict)
