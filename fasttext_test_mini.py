@@ -9,7 +9,7 @@ import numpy as np
 
 USING_WORDS_NUM = 2000000
 WORD_CLUSTERS_NUM = 1000
-USING_ARTICLES_NUM = 1000
+USING_ARTICLES_NUM = 100
 ARTICLE_CLUSTERS_NUM = 10
 
 
@@ -104,7 +104,7 @@ def online_cluster_docs(document_vec_tuple_list):
     :return: 
     """
 
-    CLUSTER_THRESHOLD = 0.8
+    CLUSTER_THRESHOLD = 0.9
 
     clusters_dict_list = []
 
@@ -177,7 +177,7 @@ def main():
     #             print(w, end=", ")
     #     print("-"*100)
 
-    headline_document_tuple_list = mainichi_corpus_data_to_documents("/home/ytaniguchi/kenkyu/news_systematize_2/corpus_data/pickles/mai2017_word_parse_added_part1.pickle")
+    headline_document_tuple_list = mainichi_corpus_data_to_documents("/home/ytaniguchi/kenkyu/news_systematize_2/corpus_data/pickles/mai2017_word_parse_added_part2.pickle")
     document_vec_list = []
     
     for headline_document_tuple in headline_document_tuple_list[:USING_ARTICLES_NUM]:
