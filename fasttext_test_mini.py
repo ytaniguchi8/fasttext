@@ -107,11 +107,13 @@ def main():
     dump_pickle(word_cluster_dict, "word_cluster_dict_mini.pickle")
     headline_document_tuple_list = mainichi_corpus_data_to_documents("/home/ytaniguchi/kenkyu/news_systematize_2/corpus_data/pickles/mai2017_word_parse_added_part1.pickle")
     document_vec_list = []
+    
     for headline_document_tuple in headline_document_tuple_list[:USING_ARTICLES_NUM]:
         document_vec = document_to_vec(headline_document_tuple[1], word_cluster_dict)
         document_vec_list.append((headline_document_tuple[0], headline_document_tuple[1], document_vec))
     dump_pickle(document_vec_list, "document_vec_list_mini.pickle")
 
+    print(document_vec_list[0])
     document_vec_dict = {}
 
     for document_vec_tuple in document_vec_list:
