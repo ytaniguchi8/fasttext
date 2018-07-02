@@ -28,10 +28,10 @@ def _centroid(vec_list):
     return np.array(centroid_vec)
 
 
-def load_vectors(fname):
+def load_vectors(fname, word_list):
     """
-    FastTextの学習済みモデルをファイル名を受け取って,
-    {"単語1": 単語ベクトル1, "単語2", 単語ベクトル2・・・} のようなdictを返す.
+    FastTextの学習済みモデルのファイル名と, コーパス記事に含まれる単語リストを受け取って,
+    コーパスに含まれる単語のみをとって{"単語1": 単語ベクトル1, "単語2", 単語ベクトル2・・・} のようなdictを返す.
     """
     fin = io.open(fname, 'r', encoding='utf-8', newline='\n', errors='ignore')
     n, d = list(map(int, fin.readline().split()))
@@ -41,7 +41,8 @@ def load_vectors(fname):
             break
         print("{} / {}".format(i, n))
         tokens = line.rstrip().split(' ')
-        data[tokens[0]] = list(map(float, tokens[1:]))
+        if tokens[0] in word_list:
+            data[tokens[0]] = list(map(float, tokens[1:]))
     return data
 
 
@@ -142,12 +143,29 @@ def online_cluster_docs(document_vec_tuple_list):
     return clusters_dict_list
 
 
-def mainichi_corpus_data_to_documents(filename):
+def mainichi_corpus_data_to_word_list(article_list):
     """
-    毎日新聞コーパスデータのpickleファイル名を受け取って,
+    毎日新聞コーパスデータを受け取って,
+    含まれる全単語のリストを返す.
+    :param article_list: 
+    :return: 
+    """
+    word_list = []
+    for i, article in enumerate(article_list, start=1):
+        print(i)
+        for spd in article["_sentence_parse_dict_list"]:
+            for p in spd["parse"]:
+                if p["surface"] != "\u3000":
+                    word_list.append(p["surface"])
+
+    return word_list
+
+
+def mainichi_corpus_data_to_documents(article_list):
+    """
+    毎日新聞コーパスデータを受け取って,
     (記事見出し, 単語ごとに半角スペースで区切られた記事全文)のtupleのリストを返す.
     """
-    article_list = load_pickle(filename)
     headline_document_tuple_list = []
     for i, article in enumerate(article_list, start=1):
         print(i)
@@ -164,11 +182,11 @@ def mainichi_corpus_data_to_documents(filename):
 
 
 def main():
-    # data = load_vectors("cc.ja.300.vec")
-    # word_cluster_dict = make_cluster_dict(data, WORD_CLUSTERS_NUM, USING_WORDS_NUM)
-    # dump_pickle(word_cluster_dict, "word_cluster_dict_mini.pickle")
+    data = load_vectors("cc.ja.300.vec")
+    word_cluster_dict = make_cluster_dict(data, WORD_CLUSTERS_NUM, USING_WORDS_NUM)
+    dump_pickle(word_cluster_dict, "word_cluster_dict_only_in_corpus.pickle")
 
-    word_cluster_dict = load_pickle("word_cluster_dict_mini.pickle")
+    word_cluster_dict = load_pickle("word_cluster_dict_only_in_corpus.pickle")
 
     # for i in range(WORD_CLUSTERS_NUM):
     #     print("label = {}".format(i))
@@ -177,7 +195,9 @@ def main():
     #             print(w, end=", ")
     #     print("-"*100)
 
-    headline_document_tuple_list = mainichi_corpus_data_to_documents("/home/ytaniguchi/kenkyu/news_systematize_2/corpus_data/pickles/mai2017_word_parse_added_part2.pickle")
+    article_list = load_pickle("/home/ytaniguchi/kenkyu/news_systematize_2/corpus_data/pickles/mai2017_word_parse_added_part2.pickle")
+    headline_document_tuple_list = mainichi_corpus_data_to_documents(article_list)
+    word_list = mainichi_corpus_data_to_word_list(article_list)
     document_vec_list = []
     
     for headline_document_tuple in headline_document_tuple_list[:USING_ARTICLES_NUM]:
