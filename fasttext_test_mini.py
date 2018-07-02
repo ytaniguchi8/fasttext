@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import io
+import datetime
 from sklearn.cluster import KMeans, MiniBatchKMeans
 from collections import defaultdict
 from pickle_tools import load_pickle, dump_pickle
@@ -164,19 +165,23 @@ def mainichi_corpus_data_to_word_list(article_list):
 def mainichi_corpus_data_to_documents(article_list):
     """
     毎日新聞コーパスデータを受け取って,
-    (記事見出し, 単語ごとに半角スペースで区切られた記事全文)のtupleのリストを返す.
+    (記事見出し, 単語ごとに半角スペースで区切られた記事全文, 1990年1月1日からの日数)のtupleのリストを返す.
     """
     headline_document_tuple_list = []
     for i, article in enumerate(article_list, start=1):
         print(i)
         word_list = []
         article_headline = article["t1"][0]
+        date_str = article["c0"][0][:6]
+        this_date = datetime.date(int("２０" + date_str[:2]), int(date_str[2:4]), int(date_str[4:6]))
+        delta = this_date - datetime.date(1990, 1, 1)
+        days = delta.days
         for spd in article["_sentence_parse_dict_list"]:
             for p in spd["parse"]:
                 if p["surface"] != "\u3000":
                     word_list.append(p["surface"])
         document = " ".join(word_list)
-        headline_document_tuple_list.append((article_headline, document))
+        headline_document_tuple_list.append((article_headline, document, days))
     
     return headline_document_tuple_list
 
@@ -185,7 +190,6 @@ def main():
     article_list = load_pickle("/home/ytaniguchi/kenkyu/news_systematize_2/corpus_data/pickles/mai2017_word_parse_added_part1.pickle")
     headline_document_tuple_list = mainichi_corpus_data_to_documents(article_list)
     word_list = mainichi_corpus_data_to_word_list(article_list)
-    document_vec_list = []
      
     # data = load_vectors("cc.ja.300.vec")
    
@@ -220,29 +224,33 @@ def main():
     #             print(w, end=", ")
     #     print("-"*100)
 
-    
-    for headline_document_tuple in headline_document_tuple_list[:USING_ARTICLES_NUM]:
-        document_vec = document_to_vec(headline_document_tuple[1], word_cluster_dict)
-        document_vec_list.append((headline_document_tuple[0], headline_document_tuple[1], document_vec))
-    dump_pickle(document_vec_list, "document_vec_list_mini.pickle")
+    initial_date = headline_document_tuple_list[0][2]
+    last_date = headline_document_tuple_list[-1][2]
 
-    # print("document_vec_list", document_vec_list[0])
+    for i in range(initial_date, last_date, 7):
+        print("-"*30, i, "-"*30)
+        document_vec_list = []
+        sliced_headline_document_tuple_list = list(filter(lambda x: initial_date <= x[2] < initial_date + 7, headline_document_tuple_list))
+        for headline_document_tuple in sliced_headline_document_tuple_list:
+            document_vec = document_to_vec(headline_document_tuple[1], word_cluster_dict)
+            document_vec_list.append((headline_document_tuple[0], headline_document_tuple[1], document_vec))
+        # dump_pickle(document_vec_list, "document_vec_list_mini.pickle")
 
-    document_vec_dict = {}
+        document_vec_dict = {}
 
-    for document_vec_tuple in document_vec_list:
-        document_vec_dict[document_vec_tuple[0]] = document_vec_tuple[2]
+        for document_vec_tuple in document_vec_list:
+            document_vec_dict[document_vec_tuple[0]] = document_vec_tuple[2]
 
-    print(len(document_vec_list))
-    print(len(document_vec_dict))
+        # print(len(document_vec_list))
+        # print(len(document_vec_dict))
 
-    doc_cluster_dict_list = online_cluster_docs(document_vec_list)
+        doc_cluster_dict_list = online_cluster_docs(document_vec_list)
 
-    for i, doc_cluster_dict in enumerate(doc_cluster_dict_list, start=1):
-        print("label = {}".format(i))
-        for included_doc in doc_cluster_dict["included_docs"]:
-            print(included_doc[0])
-        print("-"*100)
+        for i, doc_cluster_dict in enumerate(doc_cluster_dict_list, start=1):
+            print("label = {}".format(i))
+            for included_doc in doc_cluster_dict["included_docs"]:
+                print(included_doc[0])
+            print("-"*100)
 
     # doc_cluster_dict = make_cluster_dict(document_vec_dict, ARTICLE_CLUSTERS_NUM, USING_ARTICLES_NUM)
 
