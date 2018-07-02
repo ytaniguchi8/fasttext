@@ -9,8 +9,8 @@ import numpy as np
 
 USING_WORDS_NUM = 2000000
 WORD_CLUSTERS_NUM = 1000
-USING_ARTICLES_NUM = 100
-ARTICLE_CLUSTERS_NUM = 10
+USING_ARTICLES_NUM = 1000
+# ARTICLE_CLUSTERS_NUM = 10
 
 
 def _cos_sim(v1, v2):
@@ -28,10 +28,10 @@ def _centroid(vec_list):
     return np.array(centroid_vec)
 
 
-def load_vectors(fname, word_list):
+def load_vectors(fname):
     """
-    FastTextの学習済みモデルのファイル名と, コーパス記事に含まれる単語リストを受け取って,
-    コーパスに含まれる単語のみをとって{"単語1": 単語ベクトル1, "単語2", 単語ベクトル2・・・} のようなdictを返す.
+    FastTextの学習済みモデルのファイル名を受け取って,
+    {"単語1": 単語ベクトル1, "単語2", 単語ベクトル2・・・} のようなdictを返す.
     """
     fin = io.open(fname, 'r', encoding='utf-8', newline='\n', errors='ignore')
     n, d = list(map(int, fin.readline().split()))
@@ -41,8 +41,7 @@ def load_vectors(fname, word_list):
             break
         print("{} / {}".format(i, n))
         tokens = line.rstrip().split(' ')
-        if tokens[0] in word_list:
-            data[tokens[0]] = list(map(float, tokens[1:]))
+        data[tokens[0]] = list(map(float, tokens[1:]))
     return data
 
 
@@ -105,7 +104,7 @@ def online_cluster_docs(document_vec_tuple_list):
     :return: 
     """
 
-    CLUSTER_THRESHOLD = 0.9
+    CLUSTER_THRESHOLD = 0.4
 
     clusters_dict_list = []
 
@@ -158,7 +157,8 @@ def mainichi_corpus_data_to_word_list(article_list):
                 if p["surface"] != "\u3000":
                     word_list.append(p["surface"])
 
-    return word_list
+    no_dup_word_list = list(set(word_list))
+    return no_dup_word_list
 
 
 def mainichi_corpus_data_to_documents(article_list):
@@ -182,11 +182,36 @@ def mainichi_corpus_data_to_documents(article_list):
 
 
 def main():
-    data = load_vectors("cc.ja.300.vec")
-    word_cluster_dict = make_cluster_dict(data, WORD_CLUSTERS_NUM, USING_WORDS_NUM)
+    article_list = load_pickle("/home/ytaniguchi/kenkyu/news_systematize_2/corpus_data/pickles/mai2017_word_parse_added_part1.pickle")
+    headline_document_tuple_list = mainichi_corpus_data_to_documents(article_list)
+    word_list = mainichi_corpus_data_to_word_list(article_list)
+    document_vec_list = []
+     
+    # data = load_vectors("cc.ja.300.vec")
+   
+    # dump_pickle(data, "cc.ja.300.vec.pickle")
+
+    data = load_pickle("cc.ja.300.vec.pickle")
+
+    corpus_limited_data = {}
+
+    # for i, d in enumerate(data):
+    #     print(i)
+    #     if d in word_list:
+    #         corpus_limited_data[d] = data[d]
+    #         word_list.remove(d)
+    
+    for i, word in enumerate(word_list,start=1):
+        print("{} / {}".format(i, len(word_list)))
+        if word in data:
+            corpus_limited_data[word] = data[word]
+
+    dump_pickle(corpus_limited_data, "cc.ja.300.vec.limited.pickle")
+
+    word_cluster_dict = make_cluster_dict(corpus_limited_data, WORD_CLUSTERS_NUM, USING_WORDS_NUM)
     dump_pickle(word_cluster_dict, "word_cluster_dict_only_in_corpus.pickle")
 
-    word_cluster_dict = load_pickle("word_cluster_dict_only_in_corpus.pickle")
+    # word_cluster_dict = load_pickle("word_cluster_dict_only_in_corpus.pickle")
 
     # for i in range(WORD_CLUSTERS_NUM):
     #     print("label = {}".format(i))
@@ -195,10 +220,6 @@ def main():
     #             print(w, end=", ")
     #     print("-"*100)
 
-    article_list = load_pickle("/home/ytaniguchi/kenkyu/news_systematize_2/corpus_data/pickles/mai2017_word_parse_added_part2.pickle")
-    headline_document_tuple_list = mainichi_corpus_data_to_documents(article_list)
-    word_list = mainichi_corpus_data_to_word_list(article_list)
-    document_vec_list = []
     
     for headline_document_tuple in headline_document_tuple_list[:USING_ARTICLES_NUM]:
         document_vec = document_to_vec(headline_document_tuple[1], word_cluster_dict)
